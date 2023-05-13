@@ -1,134 +1,166 @@
 package com.channels.composeexamplelearning
 
+import android.content.Context
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.Button
-import androidx.compose.material.ButtonColors
-import androidx.compose.material.ButtonDefaults
-import androidx.compose.material.Card
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.constraintlayout.compose.ConstraintLayout
+import coil.compose.AsyncImage
 import com.channels.composeexamplelearning.ui.theme.ComposeExampleLearningTheme
+import com.google.accompanist.pager.ExperimentalPagerApi
+import com.google.accompanist.pager.HorizontalPager
+import com.google.accompanist.pager.HorizontalPagerIndicator
+import com.google.accompanist.pager.rememberPagerState
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ComposeExampleLearningTheme {
-                BatmanProfilePage()
-            }
-        }
-    }
-}
-
-@Composable
-fun BatmanProfilePage(){
-    Card(modifier = Modifier
-        .fillMaxSize()
-        .padding(top = 100.dp, bottom = 100.dp, start = 16.dp, end = 16.dp)
-        .border(width = 2.dp, color = Color.White, shape = RoundedCornerShape(20.dp)),
-        elevation = 4.dp) {
-        ConstraintLayout(modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)) {
-            val (image , nameText , brandText , descriptionText , bottomButtonsRow) = createRefs()
-            val topGuideLine = createGuidelineFromTop(0.15f)
-            Image(painter = painterResource(id = R.drawable.batman),
-                contentDescription = "Batman",
-                modifier = Modifier
-                    .size(200.dp)
-                    .clip(CircleShape)
-                    .border(width = 2.dp, color = Color.Red, shape = CircleShape)
-                    .constrainAs(image) {
-                        top.linkTo(topGuideLine)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    },
-                contentScale = ContentScale.Crop)
-            Text(text = "Batman" ,
-                fontSize = 30.sp ,
-                fontWeight = FontWeight.Bold ,
-                modifier = Modifier.constrainAs(nameText){
-                    top.linkTo(image.bottom)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                })
-            Text(text = "DC Universe" ,
-                fontSize = 20.sp ,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.constrainAs(brandText){
-                    top.linkTo(nameText.bottom)
-                    start.linkTo(parent.start)
-                    end.linkTo(parent.end)
-                })
-            Row(horizontalArrangement = Arrangement.SpaceEvenly ,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .constrainAs(descriptionText){
-                        top.linkTo(brandText.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    }) {
-                ProfileDetails("100k" , "Followers")
-                ProfileDetails("1K" , "Following")
-                ProfileDetails("100" , "Posts")
-            }
-            Row(horizontalArrangement = Arrangement.SpaceEvenly ,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .constrainAs(bottomButtonsRow){
-                        top.linkTo(descriptionText.bottom)
-                        start.linkTo(parent.start)
-                        end.linkTo(parent.end)
-                    }) {
-                Button(onClick = { /*TODO*/ } , colors = ButtonDefaults.outlinedButtonColors() ) {
-                    Text(text = "Follow User" , fontSize = 16.sp)
-                }
-                Button(onClick = { /*TODO*/ }) {
-                    Text(text = "Direct Message" , fontSize = 16.sp)
+                Surface(modifier = Modifier.fillMaxSize() , color = MaterialTheme.colors.background) {
+                    val systemUi = rememberSystemUiController()
+                    systemUi.setStatusBarColor(Color.Transparent)
+                    OnBoardingScreen()
                 }
             }
         }
     }
 }
 
+@OptIn(ExperimentalPagerApi::class)
 @Composable
-fun ProfileDetails(count : String? = null, followText : String? = null){
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(text = count ?: "" , fontSize = 20.sp , fontWeight = FontWeight.Bold)
-        Text(text = followText ?: "" , fontSize = 16.sp , fontWeight = FontWeight.SemiBold)
+fun OnBoardingScreen() {
+    val pagerState = rememberPagerState()
+    val list = getOnBoardingList()
+    val isNextVisible = remember{
+        derivedStateOf {
+            pagerState.currentPage != list.size - 1
+        }
     }
+    val isPrevVisible = remember {
+        derivedStateOf {
+            pagerState.currentPage != 0
+        }
+    }
+    val scope = rememberCoroutineScope()
+    var prevButtonText by remember {
+        mutableStateOf("Previous")
+    }
+    val appContext = LocalContext.current
+    Column(
+        horizontalAlignment = CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+     Box(modifier = Modifier
+         .fillMaxWidth()
+         .fillMaxHeight(0.75f)){
+         HorizontalPager(count = list.count(),
+             state = pagerState,
+             verticalAlignment = Alignment.CenterVertically) { currentPage ->
+             Log.d("Title:- " , list[currentPage].title ?: "")
+             Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = CenterHorizontally) {
+                 Text(text = list[currentPage].title ?: "",
+                     style = MaterialTheme.typography.h4,
+                     color = Color.Black)
+                 AsyncImage(model = list[currentPage].imageResource,
+                     contentDescription = null,
+                     modifier = Modifier
+                         .height(300.dp)
+                         .width(300.dp))
+                 Text(
+                     text = list[currentPage].description ?: "",
+                     style = MaterialTheme.typography.body1,
+                     color = Color.Gray,
+                     modifier = Modifier
+                         .fillMaxWidth(.6f)
+                         .padding(12.dp)
+                         .align(CenterHorizontally)
+                 )
+             }
+         }
+     }
+     HorizontalPagerIndicator(pagerState = pagerState , modifier = Modifier.padding(16.dp))
+        if (pagerState.currentPage != list.size-1){
+            prevButtonText = "Previous"
+        }
+     Row(
+         verticalAlignment = Alignment.CenterVertically,
+         horizontalArrangement = Arrangement.SpaceEvenly
+     ) {
+         if(isPrevVisible.value){
+             Button(onClick = {
+                 scope.launch {
+                     if(!prevButtonText.equals("Get Started" , ignoreCase = true)){
+                         pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                     }else{
+                         showToast(appContext)
+                     }
+                 }
+             }) {
+                 Text(text = prevButtonText)
+             }
+         }
+
+         if(isPrevVisible.value && isNextVisible.value){
+             Box(modifier = Modifier.fillMaxWidth(0.5f))
+         }
+
+         if(isNextVisible.value){
+             Button(onClick = {
+                 scope.launch {
+                     pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                     if(pagerState.currentPage == list.size-1){
+                         prevButtonText = "Get Started"
+
+                     }
+                 }
+             }) {
+                 Text(text = "Next")
+             }
+         }
+     }
+    }
+}
+
+private fun showToast(context: Context){
+    Toast.makeText(context , "Welcome Back!!!!" , Toast.LENGTH_SHORT).show()
 }
 
 @Preview(showBackground = true)
 @Composable
 fun UserProfileDetailCardPreview() {
     ComposeExampleLearningTheme {
-        BatmanProfilePage()
+        OnBoardingScreen()
     }
 }
